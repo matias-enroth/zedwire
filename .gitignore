@@ -1,0 +1,24 @@
+# build output
+zxsvr
+__pycache__/
+
+# local config (copy services.conf.example)
+services.conf
+
+# third-party games and other .p files you keep around locally...
+*.p
+*.P
+# ...but not the programs this repo builds
+!pingpong/PINGPONG.P
+!service/SERVICE.P
+
+.DS_Store
+
+# previews saved by the Claude desktop app
+Claude outputs/
+
+# notes for future Claude sessions, not published
+notes/
+
+# python venv for make test
+.venv/

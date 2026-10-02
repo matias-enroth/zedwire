@@ -1,0 +1,20 @@
+# Example zxservice config
+# One KEYWORD=command per line. '#' starts a comment.
+# Keywords are matched case-insensitively.
+
+PING=echo 'PONG!'
+FORTUNE=fortune -s -n 200 | fmt -w 32
+TIME=date '+%H:%M:%S'
+DATE=date '+%A %d %B %Y'
+WEATHER=curl -s -m 8 'wttr.in/?format=%l:+%C+%t'
+UPTIME=uptime
+UNAME=uname -a
+CAL=cal
+SUN=curl -s -m 8 'wttr.in/?format=Sunrise+%S+Sunset+%s'
+JOKE=curl -s -m 8 -H 'Accept: text/plain' https://icanhazdadjoke.com/
+
+# Services that take an argument use "$1":  LOAD "SERVICE:CALC2**100"
+CALC=echo "$1" | bc -l
+PI=echo "scale=$1+5; p=4*a(1); scale=$1; p/1" | bc -l
+FACT=python3 helpers/fact.py "$1"
+FACTOR=python3 helpers/factor.py "$1"

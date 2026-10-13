@@ -19,7 +19,7 @@ all: zxsvr
 zxsvr: zxsvr.c
 	$(CC) $(CFLAGS) -o $@ $<
 
-zx: pingpong/PINGPONG.P service/SERVICE.P
+zx: pingpong/PINGPONG.P service/SERVICE.P aytone/AYTONE.P sertest/SERTEST.P music/MUSIC.P
 
 pingpong/pingpong.bin: pingpong/pingpong.asm
 	cd pingpong && $(Z80ASM) -o pingpong.bin pingpong.asm
@@ -32,6 +32,24 @@ service/service.bin: service/service.asm service/table.inc
 
 pingpong/PINGPONG.P: pingpong/pingpong.bin pingpong/pingpong.bas tools/mkp.py
 	$(PYTHON) tools/mkp.py pingpong/pingpong.bin pingpong/pingpong.bas $@
+
+aytone/aytone.bin: aytone/aytone.asm
+	cd aytone && $(Z80ASM) -o aytone.bin aytone.asm
+
+aytone/AYTONE.P: aytone/aytone.bin aytone/aytone.bas tools/mkp.py
+	$(PYTHON) tools/mkp.py aytone/aytone.bin aytone/aytone.bas $@
+
+sertest/sertest.bin: sertest/sertest.asm
+	cd sertest && $(Z80ASM) -o sertest.bin sertest.asm
+
+sertest/SERTEST.P: sertest/sertest.bin sertest/sertest.bas tools/mkp.py
+	$(PYTHON) tools/mkp.py sertest/sertest.bin sertest/sertest.bas $@
+
+music/music.bin: music/music.asm
+	cd music && $(Z80ASM) -o music.bin music.asm
+
+music/MUSIC.P: music/music.bin music/music.bas tools/mkp.py
+	$(PYTHON) tools/mkp.py music/music.bin music/music.bas $@
 
 service/SERVICE.P: service/service.bin service/service.bas tools/mkp.py
 	$(PYTHON) tools/mkp.py service/service.bin service/service.bas $@

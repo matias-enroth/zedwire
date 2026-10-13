@@ -97,3 +97,25 @@ The same three wires on the DB9 side:
   `stty -F /dev/ttyUSB0 38400 raw -echo && xxd /dev/ttyUSB0`. Then
   `ZXPAND "OPE SER 38400"` and `ZXPAND "PUT SER HELLO"` on the ZX81 should
   show `48 45 4c 4c 4f`.
+
+## Check the link
+
+PINGPONG is the smallest two-way test: the ZX81 sends `PING` and the computer
+answers `PONG!`.
+
+```sh
+make
+./zxsvr pingpong/PINGPONG.P /dev/cu.usbserial-XXXX    # LOAD "$" on the ZX81
+./pingpong/zxpong.py /dev/cu.usbserial-XXXX
+```
+
+On the ZX81: `RUN`. Expected:
+
+```
+GOT 6 BYTES:
+80 79 78 71 33 10
+PONG?
+```
+
+`RUN 400` does the same but sends `PING` with BASIC's `ZXPAND "PUT SER PING"`:
+`zxpong` reports whether the bytes arrived as ASCII or ZX81 codes.

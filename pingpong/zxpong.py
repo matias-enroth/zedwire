@@ -54,7 +54,7 @@ def main():
                 continue
             data = os.read(fd, 256)
             if not data:
-                continue
+                raise OSError(5, 'serial port closed')
             print(f'{time.strftime("%H:%M:%S")} RX {show(data)}')
             buf = (buf + data)[-64:]
             kind = 'ascii' if PING_ASCII in buf else 'zx81-charset' if PING_ZX81 in buf else None

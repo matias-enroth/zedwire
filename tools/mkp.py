@@ -70,6 +70,10 @@ def build(lines, mc):
     return bytes(sv) + bytes(prog) + dfile + b'\x80'
 if __name__ == '__main__':
     mc = open(sys.argv[1], 'rb').read()
+    bad = [16514 + i for i, b in enumerate(mc) if b == 0x76]
+    if bad:     # a NEWLINE byte inside the REM confuses the ROM (LIST, line scanning)
+        sys.exit(f'{sys.argv[1]}: $76 at ' + ', '.join(f'{a} (${a:04X})' for a in bad) +
+                 ': shift the code (a nop) or avoid the value')
     lines = []
     for L in open(sys.argv[2]):
         L = L.rstrip('\n')

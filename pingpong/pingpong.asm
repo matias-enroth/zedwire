@@ -6,7 +6,7 @@
 ;   OUT ($E007),$C5  -> IN ($E007) = bytes waiting in rx buffer
 ;   OUT ($E007),$C7  -> IN ($E007) = next rx byte
 ;   IN ($17) bit 7   busy
-; Registers: only A,BC,DE,HL touched; IX/IY left alone (SLOW-mode display).
+; Registers: only A,BC,DE,HL touched; IX, IY and AF' left alone (SLOW-mode display).
 ;
 ; Entry points and data, as used by pingpong.bas:
 ;   USR 16514  start: send PING, then receive

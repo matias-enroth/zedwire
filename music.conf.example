@@ -1,0 +1,23 @@
+# Example music.conf - optional.
+#
+# zxmusic finds the tunes in its tunes folder by itself and gives each one
+# a keyword (shown in MUSIC's browser). This file is only for keywords of
+# your own and for options. Copy it to music.conf, next to zxmusic.py.
+#
+# One KEYWORD=file per line, '#' starts a comment. Paths are relative to
+# this file. Keywords are matched case-insensitively: LOAD "MUSIC:TUNE1".
+# A keyword can be up to 27 characters (all that LOAD "MUSIC:..." can carry);
+# a longer one is skipped with a note in the server log.
+# FILE@2 = song 2 of a file with several.
+#
+# Options, after a '|'; they apply however the tune is picked:
+#   scc=3     MSX VGM: put SCC voice 3 on the free AY channel (scc=off: AY only)
+#   ts=2      TurboSound PT3: play the second module
+#   drums=off sampled drums muted (drums=env: softer AY drums)
+#
+# Tunes belong to their composers: keep them in tunes/ (not committed).
+
+#COMMANDO=tunes/Project AY_Spectrum_Demos_Commando.ay
+#BIONIC3=tunes/bioniccommando.ay@3
+#JUNGLE=tunes/msx-tune.vgz | scc=3
+#SURFING2=tunes/turbosound.pt3 | ts=2

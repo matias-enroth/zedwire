@@ -17,6 +17,11 @@ ZX81 -> server : ASCII request: a keyword, optionally followed by an
                  a short idle gap.
 server -> ZX81 : 2-byte little-endian length, then that many bytes of
                  ASCII text ('\\n' = new line).
+ZX81 -> server : while it reads the reply, a 'k' (a credit) after every 64
+                 bytes it has read. The server never sends more than 192
+                 bytes beyond its credits: 256 unread bytes hard-freeze the
+                 ZXpand+. Credits that arrive late are ignored (requests
+                 are upper case, so a lower-case 'k' is never part of one).
 
 The reply is laid out for the ZX81 screen: wrapped to 32 columns and cut
 to fit under the header line. A line of exactly 32 characters gets no
@@ -46,6 +51,9 @@ import argparse, os, re, select, signal, subprocess, sys, termios, textwrap, tim
 
 COMMAND_TIMEOUT = 10     # seconds; SERVICE.P waits 12 s for a reply to start
 IDLE_GAP = 0.05          # seconds of silence that ends a keyword
+REPLY_WINDOW = 192       # bytes of a reply sent ahead of the ZX81's credits
+REPLY_CREDIT = 64        # SERVICE sends 'k' after every 64 bytes it has read
+CREDIT_TIMEOUT = 2.0     # seconds without a credit: the ZX81 stopped reading
 MAX_KEYWORD = 32
 ARG_OK = re.compile(r'[0-9 +\-*/^().]{1,30}')
 BAUDS = {1200: termios.B1200, 2400: termios.B2400, 4800: termios.B4800,
@@ -197,14 +205,33 @@ def write_all(fd, data):
 
 
 def send_reply(fd, data, chunk, pace):
-    """Length prefix, then the text in small paced chunks so the ZXpand's
-    receive buffer isn't outrun while the ZX81 polls it."""
-    write_all(fd, bytes([len(data) & 0xff, (len(data) >> 8) & 0xff]))
-    for i in range(0, len(data), chunk):
-        write_all(fd, data[i:i + chunk])
-        if pace:
-            termios.tcdrain(fd)
-            time.sleep(pace)
+    """Length prefix, then the text in small paced chunks, never more than
+    REPLY_WINDOW bytes ahead of the ZX81's credits: if SERVICE stops reading
+    for any reason, 256 unread bytes would freeze the ZXpand+. Returns True
+    if it all went, False if the ZX81 stopped giving credits."""
+    out = bytes([len(data) & 0xff, (len(data) >> 8) & 0xff]) + data
+    sent = credits = 0
+    while sent < len(out):
+        room = 2 + REPLY_WINDOW + credits * REPLY_CREDIT - sent   # SERVICE doesn't count the length
+        if room > 0:
+            n = min(chunk, room, len(out) - sent)
+            write_all(fd, out[sent:sent + n])
+            sent += n
+            if pace:
+                termios.tcdrain(fd)
+                time.sleep(pace)
+            timeout = 0
+        else:
+            timeout = CREDIT_TIMEOUT
+        r, _, _ = select.select([fd], [], [], timeout)
+        if r:
+            got = os.read(fd, 64)
+            if not got:
+                raise OSError(5, 'serial port closed')
+            credits += got.count(b'k')
+        elif timeout:
+            return False
+    return True
 
 
 def read_keyword(fd):
@@ -216,12 +243,12 @@ def read_keyword(fd):
             return buf                                        # idle gap after data
         data = os.read(fd, 64)
         if not data:
-            continue
+            raise OSError(5, 'serial port closed')
         for b in data:
             if b in (10, 13):
                 if buf:
                     return buf
-            else:
+            elif b != 0x6B:                                   # 'k': a late credit, never part of a request
                 buf += bytes([b])
         if len(buf) > MAX_KEYWORD:
             return buf
@@ -235,7 +262,8 @@ def main():
     ap.add_argument('--width', type=int, default=32, help="wrap width (0 = no layout)")
     ap.add_argument('--lines', type=int, default=19, help="max reply lines")
     ap.add_argument('--chunk', type=int, default=32, help="bytes per paced chunk")
-    ap.add_argument('--pace-ms', type=float, default=10, help="pause between chunks (0 = none)")
+    ap.add_argument('--pace-ms', type=float, default=10, help="pause between chunks (0 = none); "
+                    "never more than 192 bytes ahead of the ZX81's credits either way")
     args = ap.parse_args()
 
     commands = load_config(args.config)
@@ -263,8 +291,9 @@ def main():
             text, tag = handle(request, commands, cwd)
             data = zx_layout(text, args.width, args.lines) if args.width else \
                 zx_fold(text).encode('ascii')[:1000]
-            send_reply(fd, data, args.chunk, args.pace_ms / 1000)
-            print(f"{time.strftime('%H:%M:%S')} <- {request!r} [{hexed}] -> {len(data)} bytes ({tag})")
+            ok = send_reply(fd, data, args.chunk, args.pace_ms / 1000)
+            print(f"{time.strftime('%H:%M:%S')} <- {request!r} [{hexed}] -> {len(data)} bytes ({tag})"
+                  + ('' if ok else ' - SERVICE stopped reading, reply cut short (an old SERVICE.P? GOTO 30 to update)'))
     except KeyboardInterrupt:
         print("\nShutting down.")
     except OSError as e:

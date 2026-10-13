@@ -3,11 +3,13 @@
 ; USR 16514 (recv): read a zxservice reply - 2-byte LE length, then that
 ;   many bytes - into BUF. Returns BC = bytes stored (0 = no reply).
 ;   Declared length is left in RLEN so BASIC can spot a short read.
+;   A 'k' goes back after every 64 bytes stored: credits, so zxservice never
+;   gets 256 bytes ahead. 256 unread bytes hard-freeze the ZXpand+.
 ; USR 16517 (prt):  print BUF via ROM RST $10, converting ASCII to the
 ;   ZX81 charset (lowercase folded to upper, \n -> newline, CR dropped).
 ;
 ; ZXpand+ port API as in pingpong.asm. Timeouts use FRAMES (SLOW mode).
-; Touches A,BC,DE,HL only; IX/IY left alone.
+; Touches A,BC,DE,HL only; IX, IY and AF' left alone.
 
 FRAMES:  equ 16436
 BUFSZ:   equ 1024
@@ -57,6 +59,15 @@ rloop:  push hl
         ld (hl),a
         inc hl
         inc de
+        ld a,e                  ; a credit for every 64 bytes: the server
+        and 63                  ; never has more than 192 unread (256
+        jr nz,rloop             ; freeze the ZXpand+)
+        push hl
+        push de
+        ld a,'k'
+        call sendb
+        pop de
+        pop hl
         jr rloop
 rstore: ld (count),de
 rdone:  ld bc,(count)
@@ -107,6 +118,19 @@ rd:     ld a,(avail)
         or a
         ret
 
+; send the byte in A
+sendb:  ld d,a
+        ld bc,$0007
+        ld a,c
+        out (c),a
+        call wcc
+        ld a,d
+        ld bc,$4007
+        out (c),a
+        call wcc
+        ld bc,$e007
+        ld a,$c6
+        out (c),a
 wcc:    in a,($17)
         and $80
         jr nz,wcc
